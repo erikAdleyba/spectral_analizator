@@ -89,7 +89,7 @@ class SpectrumAnalyzerApp:
         self.root.geometry(f"{self.screen_width}x{self.screen_height}")
 
         self.scan_ranges = [
-            (400000000, 900000000, None),
+            (400000000, 500000000, None),
             #  (800000000, 1150000000, None),
             # (1150000000, 1500000000, None),
             # (1500000000, 1850000000, None),
@@ -343,11 +343,15 @@ class SpectrumAnalyzerApp:
         stop_freq = simpledialog.askfloat("Добавить диапазон", "Конечная частота (МГц):")
         threshold = simpledialog.askfloat("Добавить диапазон", "Порог амплитуды (дБм):")
 
-        if start_freq and stop_freq and threshold:
+        if start_freq is not None and stop_freq is not None and threshold is not None:
             self.scan_ranges.append((int(start_freq * 1e6), int(stop_freq * 1e6), threshold))
             self.alert_flags.append({'high': False})
+            self.ema_values.append(None)  # Добавление нового значения EMA
+            self.stability_counter.append(0)  # Добавление нового счетчика стабильности
             self.update_range_listbox()
             logging.info(f"Добавлен новый диапазон: {start_freq}-{stop_freq} МГц, Порог: {threshold} дБм")
+
+
 
     def edit_range(self):
         selected = self.range_listbox.curselection()
@@ -356,14 +360,16 @@ class SpectrumAnalyzerApp:
             return
 
         index = selected[0]
-        start_freq = simpledialog.askfloat("Редактировать диапазон", "Начальная частота (МГц):", initialvalue=self.scan_ranges[index][0] // 1e6)
-        stop_freq = simpledialog.askfloat("Редактировать диапазон", "Конечная частота (МГц):", initialvalue=self.scan_ranges[index][1] // 1e6)
+        start_freq = simpledialog.askfloat("Редактировать диапазон", "Начальная частота (МГц):", initialvalue=self.scan_ranges[index][0] / 1e6)
+        stop_freq = simpledialog.askfloat("Редактировать диапазон", "Конечная частота (МГц):", initialvalue=self.scan_ranges[index][1] / 1e6)
         threshold = simpledialog.askfloat("Редактировать диапазон", "Порог амплитуды (дБм):", initialvalue=self.scan_ranges[index][2])
 
-        if start_freq and stop_freq and threshold:
+        if start_freq is not None and stop_freq is not None and threshold is not None:
             self.scan_ranges[index] = (int(start_freq * 1e6), int(stop_freq * 1e6), threshold)
             self.update_range_listbox()
             logging.info(f"Отредактирован диапазон: {start_freq}-{stop_freq} МГц, Порог: {threshold} дБм")
+
+
 
     def delete_range(self):
         selected = self.range_listbox.curselection()
@@ -372,10 +378,16 @@ class SpectrumAnalyzerApp:
             return
 
         index = selected[0]
+        start_freq = self.scan_ranges[index][0] / 1e6
+        stop_freq = self.scan_ranges[index][1] / 1e6
         del self.scan_ranges[index]
         del self.alert_flags[index]
+        del self.ema_values[index]  # Удаление значения EMA
+        del self.stability_counter[index]  # Удаление счетчика стабильности
         self.update_range_listbox()
-        logging.info(f"Удален диапазон: {self.scan_ranges[index][0]/1e6}-{self.scan_ranges[index][1]/1e6} МГц")
+        logging.info(f"Удален диапазон: {start_freq}-{stop_freq} МГц")
+
+
 
     def start_calibration(self):
         self.ax.clear()
